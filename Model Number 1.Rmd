@@ -1,8 +1,8 @@
 ---
-title: A Data Approach for Product Management and Business Modeling
+title: Starting a Data Driven Approach for Product Management and Business Modeling
 subtitle: Model Number 1
 author: Vivek Narayan
-date: August 4, 2019
+date: August 6, 2019
 output: 
     prettydoc::html_pretty:
         theme: architect
@@ -13,14 +13,14 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(descr)
 library(corrplot)
-library(statisticalModeling)
-library(rpart)
 library(MASS)
+# library(statisticalModeling)
+# library(rpart)
 ```
 
 ## Situation
 
-Approximately 25% of the a product's user-base (~42K) use the product, at least, once a month. However, given the nature of the service, where privacy is paramount, advertising revenue or selling user information aren't a part of the business model. Optional support tiers are available for users to consider, but this business model has failed to sustain operations. There is recognition that a paid subscription or a Product _+_ version is the only way to sustain and grow the business. An attempt at introducing a paid product has met with some success. It is assumed that usability of the product is linked to some of the financial outcomes.
+Approximately 25% of a product's user-base (~42K) use a product, at least, once a month. However, given the nature of the service, where privacy is paramount, advertising revenue or selling user information aren't a part of the business model. Optional support tiers are available for users to consider, but this business model has failed to sustain operations. There is recognition that a paid subscription or a Product _+_ version is the only way to sustain and grow the business. An attempt at introducing a paid product has met with some success. It is assumed the usability of the product is linked to some of the financial outcomes.
 
 ## Task
 
@@ -30,30 +30,30 @@ The client uses a combination of an off-the-shelf solution, along with Google An
 * Which existing features to include in a _Freemium_ like offering?
 * How best to structure, and link, data-driven research to product development (sustainable & repeatable revenue)?
 * How best to expand the user base and expand operations?
-* How best to communicate Data results with the client (interpret-ability is key)?
+* How best to communicate Data results with the client, where interpret-ability is key?
 
 ## Action
 
-After several conversations with the client it was decided to create an initial model of the current user base to understand which features were being used and if there was any link of usage to the existing business model.
+After several conversations with the client it was decided to create an initial model of the current user base to understand which features were being used and if there is any link between usage and the existing business model(s).
 
 ### Approach
 
 A limit of 20 _usability_ and _financial outcome_ variables were selected (based on the initial conversations with the client) with the aim of performing logistic regression against the financial outcome of interest. A correlogram was created to assist in the visualization of data.
 
-#### Corr-plot
+#### Correlogram using Corr-plot from the corrplot package
 
-After some data wrangling which involved the handling _NAs_ and converting variables into _factors_ the following corr-plot was observed.
+After some data wrangling which involved the handling of _NAs_ (missing values) and converting some variables into _factors_, the following corr-plot was observed.
 
-* Understanding the corr-plot call
-    + _scale_ while not strictly required for the cor() call, it is included here because we intend to use hierarchical clustering to order the grid.
+* Understanding the corr-plot code
+    + _scale_ while not strictly required for the cor() call, is being used, here, because we intend to use hierarchical clustering to order the grid.
     + _order = hclust_ [Datacamp Tutorial on Heirarchical Clustering](https://www.datacamp.com/community/tutorials/hierarchical-clustering-R) 
-        + This was done to arrange the data using a clustering algorithm so that features used be grouped together to better understand user behavior.
+        + Hierarchical clustering is being used to arrange the data to group features together to better understand user behavior.
     + The remainder of the arguments are cosmetic - [Link to package on cran](https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html)
 
-
-
 ```{r corrplot, echo=TRUE}
+#Load Data
 df_mini <- readRDS("article_data")
+#Create corr-plot
 df_mini %>% scale() %>% cor() %>% corrplot(order = "hclust", hclust.method = "average",
                                             method = "color", diag = F,
                                             tl.col = "gray20",
@@ -64,38 +64,40 @@ df_mini %>% scale() %>% cor() %>% corrplot(order = "hclust", hclust.method = "av
 
 #### Interpretation of the corr-plot
     
-* What does the corr-plot do?
+* What does the corr-plot show?
     + The corr-plot visualizes correlations between variables and provides a correlation co-efficient (optional) for each pair of potentially correlated variables.
-    + The dark blue color indicates high positive correlation, contrasted with the dark reds that indicate high negative correlation.
+    + The dark blue color indicates high positive correlation, contrasted with the dark reds that indicate a high negative correlation.
 
 * Salient Features of this Corr-plot (Clustering)
-    + _Financial Products 1, 2 and 3_ cluster together
-    + _Usage_ and _Frequency of Usage_ characteristics cluster together
+    + _Financial Products 1, 2 and 3_ cluster together.
+    + _Usage_ and _Frequency of Usage_ characteristics cluster together.
     + However, there doesn't seem to be an overlap between _Financial Products_ and _Usage_.
     
 * Salient Features of this Corr-plot (Correlation)
     + _Financial product 2_ is highly correlated to _Financial product 3_.
-        + Buyer of one product likely buys the other.
+        + Buyer of one product most likely buys the other.
     + _Usage Characteristic 1_ is highly correlated to _Usage Characteristic 5_.
         + Does one behavior lead to the other?
     + _Primary users_ are somewhat correlated to _Social users_ (think some users have followers). 
         + Should _followers_ be a paid feature?
+        + Need to understand customer acquisition better.
     + The correlations between _Frequency users_ and _User characteristics 1 and 5_ should be explored. 
         + Who are the power users and what to they like doing? Note, from above _Usage characteristics 1 & 5_ are highly correlated.
+        + Why aren't they linked to any of the financial outcomes? See below too.
     + _Financial Outcome_ is poorly correlated to _Frequency_ and _Usage_.
-    
 
 #### Logistic Regression
 
+Logistic regression is a general linear model for binomial distributions (Yes/No). [Link](https://towardsdatascience.com/simply-explained-logistic-regression-with-example-in-r-b919acb1d6b3)
 ```{r logistic regression, echo=TRUE}
 #Create a General Linear Model with glm()
 Logistic_model <- glm(Fin_outcome ~ ., family = "binomial", data = df_mini)
 summary(Logistic_model)
 ```
 
-#### Interpretation of Logistic Regression
+#### Interpretation of Logistic Regression model
 
-The output of a logistic regression can be confusing because it describes the log-odds of something binary (yes/no) occurring. For example, a per unit increase in _Usage Characteristic 2_ increases the log odds of _Financial Outcome_ by 1.097e-02. This doesn't make sense to most people. However, we can transform log-odds into regular likelihood by calculating the exponential of the _Estimate_.
+The output of a logistic regression model can be confusing because it describes the log-odds of something binary (yes/no) occurring. For example, a per unit increase in _Usage Characteristic 2_ increases the log odds of _Financial Outcome_ by 1.097e-02. This doesn't make sense to most people. However, we can transform log-odds into regular likelihood by calculating the exponential of the _Estimate_, as seen below.
 
 ```{r likelihood, echo=TRUE}
 # Transform coefficients / Log - odds to interpret data
@@ -103,26 +105,26 @@ likelihood <- coef(Logistic_model) %>% exp() %>% round(2)
 likelihood
 ```
 
-
 #### Interpretation of Likelihood
 
 * There is no increase or decrease in the likelihood of belonging to the class _Financial Outcome_ based on whether the user is a _Primary User_ or not.
-* If a user has purchased _Financial Product 1_ then they are 3.89 times more likely to be a member of the _Financial Outcome_ class as compared to a user who has not purchased _Financial Product 1_.
+* If a user has purchased _Financial Product 1_ then they are 3.89 times more likely to be a member of the _Financial Outcome_ class as compared to a user who has __not__ purchased _Financial Product 1_.
     + Similarly, those that prefer _Communication Methodology 2_ are 6.3 times as likely to be a member of the class _Financial Outcome_.
 
 #### Refining the Model
 
-Removing insignificant variables using StepAIC()
+Removing insignificant variables using StepAIC() from the [MASS Package](https://cran.r-project.org/web/packages/MASS/MASS.pdf). See also the Statistical Modeling link in additional resources, below.
 
-```{r StepAIC}
+```{r StepAIC, echo=TRUE}
+# Using AIC values to trim the model to focus on significant variables.
 trimmed_model <- stepAIC(Logistic_model, trace = 0)
 trimmed_formula <- as.formula(summary(trimmed_model)$call)
-trimmed_formula
+#trimmed_formula
 ```
 
 New Model Likelihoods
 
-```{r New Model}
+```{r New Model, echo = FALSE}
 New_model <- glm(trimmed_formula, family = "binomial", data = df_mini)
 summary(New_model)
 likelihood_new <- coef(New_model) %>% exp() %>% round(2)
@@ -132,16 +134,17 @@ likelihood_new
 R2 - Goodness of Fit - Equivalents for Logistic regression
 
 ```{r R2 equivalents}
+#Using LogRegR2() from the descr package - see additional resources.
 LogRegR2(New_model)
 ```
 
 #### Interpretation of the Goodness of Fit
 
-Generally a fit below 0.2 is considered poor. In other words, while the model may be significant as indicated by the p-values, the explanation of variation in the underlying model is not good enough.
+Generally a fit below 0.2 is considered poor. While the model may be significant, as indicated by the p-values, the explanation of variation in the underlying model is not considered meaningful enough. In other words 80% of the variation of the data is not explained by the variables under study.
 
 #### Additional refinement of the model
 
-It was decided to create a model of only those users that preferred _Communication Preference 2_. It was recognized that focusing on these users would, effectively, half the target audience, however, focusing on a narrower but potentially predictable audience was considered an acceptable trade-off.
+It was decided to create a model of only those users that preferred _Communication Preference 2_. It was recognized that focusing on these users would, effectively, half the target audience, however, focusing on a narrower, but potentially predictable, audience was considered an acceptable trade-off.
 
 ```{r Narrow Focus, echo=FALSE}
 df_mini_2 <- df_mini %>% dplyr::filter(Comm_pref_2 > 0) %>% dplyr::select(-Comm_pref_2)
@@ -154,7 +157,7 @@ trimmed_formula_2 <- as.formula(summary(trimmed_model_2)$call)
 New_model_2 <- glm(trimmed_formula_2, family = "binomial", data = df_mini_2)
 ```
 
-```{r New Model 2}
+```{r New Model 2, echo=FALSE}
 summary(New_model_2)
 ```
 
@@ -168,12 +171,17 @@ Refined Goodness of Fit
 ```{r Refined Goodness of Fit}
 LogRegR2(New_model_2)
 ```
+
+The indices for the goodness of fit models are even worse.
+
 #### Even more refinement?
+
 ```{r, echo=FALSE}
 message("How many users engage in Financial Product 1?")
 df_mini %>% filter(Fin_prod_1 > 0) %>% count()
 ```
-There aren't enough users to make a business case.
+
+There aren't enough users to make a business case, so additional refinement of the model was abandoned.
 
 ## Result
 
@@ -199,40 +207,51 @@ Further refinement of the model was not considered because the cohort of users e
 
 The final conclusion reached was that the _Financial Outcome_ of interest occurred in a way that currently captured variables were not able to model.
 
-
 ## Talk (with the Client)
 
-We went back and presented our results. After some discussion. The Product Owners believed that a combination of certain _Usability Behaviors_ (being measured) in conjunction with a _Value Proposition 1_ (not being measured) was key to _Financial Outcome_.
+We went back and presented our results. After some discussion. The Product Owners believed that a combination of certain _Usability Behaviors_ (being measured) in conjunction with _Value Proposition 1_ (not being measured) was key to _Financial Outcome_.
 
-## SMART Goals
+## SMART Goals - Next steps
 
-* A/B Test  _Communication Preference 2_ and _Communication Preference 2_ with respect to establishing a cohort of those that agree with _Value Proposition 1_
+* A/B Test  _Communication Preference 1_ and _Communication Preference 2_ with respect to establishing a cohort of those that agree with _Value Proposition 1_.
 
-* Seek _Financial Outcome_ behavior and compare cohorts of those that agree and disagree with _Value Proposition 1_ as a means to create a baseline for future product iterations.
+* Seek _Financial Outcome_ behavior and compare cohorts of those that agree and disagree with _Value Proposition 1_ as a means to create a baseline for future product iterations and financial modeling.
+    + Measure: A method of capturing _Value Proposition 1_ has to be created using the client's off-the-shelf communication tool. Collecting _Financial Outcome_ data has been engineered.
+    + Attainable: The above tool is capable of providing the logistics for the A/B test. Data analysis will be done off-line via RStudio after exporting data.
+    + Relevent: The goals are relevant because they create a baseline against which future business models and product iterations will be compared.
+    + Timely: They have been scheduled as part of the first sprint ~ 6 weeks.
 
-## Learnings
+## Learnings from the excercise
 
 * In typical MBA fashion, I'm calling this process STAR - T - SMART.
-* Product Owners / Start-up Founders have a strong sense of, qualitatively, why users engage in behavior but it is important to prevent them from being blind-sided by data.
-* Measuring _Behavior_ or _Value Propositions_ is needed to link to financial outcomes.
+    + Situation, Task, Action, Result - Talk - Specific, Measurable, Attainable, Relevant, and Timely Goals.
+* Product Owners / Start-up Founders have a strong sense of, qualitatively knowing, why users engage in behavior but it is important to prevent them from being blind-sided. Verifying assumptions with data is helpful here.
+* Measured _Behavior_ or _Value Proposition_ proxies need to link with financial outcomes to create a scalable business model.
 
-## About Us and Resources
+## About Us
 
 ### Zinc Coop
 
-<img src="https://pbs.twimg.com/profile_images/594223717539909633/LspiuVih_400x400.jpg" alt="https://twitter.com/zinccooperative" width="100"/>
-A digital product and services cooperative. Find us on [twitter](https://twitter.com/zinccooperative).
+A digital product and services cooperative. To learn more about us, find us on [twitter](https://twitter.com/zinccooperative).
 
 ### Author
 
-<img src="https://avatars2.githubusercontent.com/u/7209665?s=400&u=fa9e6d2b63e3b2412fb676104a4b373c3fd69cd5&v=4" width="200"/>
-
-The author's perspective is informed by his experience as a healthcare provider, innovation institute director, and consumer health tech co-founder. He views the world of innovation through the lens of decisions and behaviors demonstrated by individuals, collectives, and institutions, and the data, or lack thereof, that drive those decisions. He started adulthood as a doctor in India and transitioned into Healthcare innovation after experimenting with Psychoanalytical theory. He is knowledgeable about consumer health and welcomes questions that arise at the intersection of technology, consumer and clinical health, and the early stage venture development that seeks to transform this space. His current research interest is in the creation of innovation frameworks to improve provider-led patient-centric healthcare. Among other things, he is a worker at Zinc, a digital product and service collective where he works on business ops and hypothesis led product management.
+The author's perspective on product development is informed by his experience as a healthcare provider, innovation institute director, and consumer health tech co-founder. He views the world of innovation through the lens of decisions and behaviors demonstrated by individuals, collectives, and institutions, and the data, or lack thereof, that drive those decisions. He started adulthood as a doctor in India and transitioned into Healthcare innovation after experimenting with Psychoanalytical theory. He is knowledgeable about consumer health and welcomes questions that arise at the intersection of technology, consumer and clinical health, and the early stage venture development that seeks to transform this space. His current research interest is in the creation of innovation frameworks to improve provider-led patient-centric healthcare. Among other things, he is a worker at Zinc, a digital product and service collective where he works on business ops and data driven product management.
 
 Correspondence and Feedback can be addressed to vivek.narayan[at]zincma.de
 
-### Resources
+***
 
+[Github](https://github.com/zinc-technology/Product-Management-1)
+
+
+#### Additional Resources
+
+Marketing Analytics in R: Statistical Modeling - A course from [Datacamp](https://www.datacamp.com/courses/marketing-analytics-in-r-statistical-modeling)
+
+[MASS package (StepAIC)](https://cran.r-project.org/web/packages/MASS/MASS.pdf)
+
+[descr package (LogRegR2)](https://cran.r-project.org/web/packages/descr/descr.pdf)
 
 
 
